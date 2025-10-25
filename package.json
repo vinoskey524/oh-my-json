@@ -1,0 +1,20 @@
+{
+  "name": "oh-my-json",
+  "module": "main.ts",
+  "type": "module",
+  "scripts": {
+    "s": "clear && bun run src/main.ts",
+    "t": "clear && bun run src/test.ts",
+    "b": "clear && tsup src/main.ts --format esm --dts && esbuild dist/main.js --bundle --minify --format=esm --platform=node --outfile=dist/main.mjs --keep-names --allow-overwrite",
+    "p": "clear && npm publish --access public",
+    "i": "clear && npm info oh-my-json"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "esbuild": "^0.25.11",
+    "tsup": "^8.5.0"
+  },
+  "peerDependencies": {
+    "typescript": "^5.0.0"
+  }
+}
