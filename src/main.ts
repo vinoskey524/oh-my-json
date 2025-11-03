@@ -2153,6 +2153,6 @@ const jzon: MAIN_TYPE = {
     }
 };
 
-const omj = jzon.init();
-export default omj;
+const json = jzon.init();
+export default json;
 

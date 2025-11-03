@@ -5,6 +5,7 @@ The zenith of JSON manipulation.
 ## Table of contents
 
 - [Installation](#installation)
+- [What's oh-my-json](#whats-oh-my-json)
 - [API Documentation](#api-documentation)
     - [import](#import)
     - [get](#get)
@@ -36,20 +37,24 @@ The zenith of JSON manipulation.
 
 ```sh
 # npm
-$ npm install oh-my-json
+$ npm install @vinoskey524/oh-my-json
 
 # yarn
-$ yarn add oh-my-json
+$ yarn add @vinoskey524/oh-my-json
 
 # pnpm
-$ pnpm add oh-my-json
+$ pnpm add @vinoskey524/oh-my-json
 
 # bun
-$ bun add oh-my-json
+$ bun add @vinoskey524/oh-my-json
 
 # deno
-$ deno add npm:oh-my-json
+$ deno add npm:@vinoskey524/oh-my-json
 ```
+
+## What's oh-my-json
+
+Oh-my-json is a powerful software that allows you to manipulate JSON data with incredible ease and flexibility like never before.
 
 ## API Documentation
 
@@ -124,7 +129,7 @@ const user = {
 ### **import**
 
 ```ts
-import json from 'oh-my-json';
+import json from '@vinoskey524/oh-my-json';
 ```
 
 ### **get**
@@ -854,7 +859,7 @@ If you specify both **level** and **path**, then **path** will have the priority
 
 - The original JSON object is never modified.
 
-- All the references between the returned data and the original JSON object are broken by default.
+- All references between the returned data and the original JSON object are broken by default.
 
 ## Author
 
@@ -882,7 +887,7 @@ Below are other packages from the same author.
 
 - **[feedlist](https://npmjs.com/package/feedlist)**: A highly efficient and high-performance feeds renderer, designed for React and React Native (Bare and Expo).
 
-- **[panda](https://npmjs.com/package/panda)**: .
+- **[panda](https://npmjs.com/package/@vinoskey524/panda)**: Advanced JSON-based state manager for React and React Native (Bare and Expo).
 
 ## Support Me
 

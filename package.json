@@ -1,13 +1,54 @@
 {
-  "name": "oh-my-json",
+  "name": "@vinoskey524/oh-my-json",
+  "version": "1.0.3",
   "module": "main.ts",
   "type": "module",
+  "description": "The zenith of JSON manipulation",
+  "exports": {
+    "import": {
+      "types": "./dist/main.d.ts",
+      "default": "./dist/main.mjs"
+    }
+  },
+  "types": "./dist/main.d.ts",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vinoskey524/oh-my-json.git"
+  },
+  "author": "Hamet Kévin E. ODOUTAN - @vinoskey524",
+  "bugs": {
+    "url": "https://github.com/vinoskey524/oh-my-json/issues"
+  },
+  "homepage": "https://github.com/vinoskey524/oh-my-json#readme",
+  "keywords": [
+    "oh-my-json",
+    "json",
+    "data",
+    "manipulation",
+    "react",
+    "react-native",
+    "native",
+    "preact",
+    "angular",
+    "vue",
+    "svelte",
+    "node",
+    "deno",
+    "bun",
+    "javascript",
+    "typescript",
+    "library",
+    "software",
+    "latest",
+    "new"
+  ],
+  "license": "MIT",
   "scripts": {
     "s": "clear && bun run src/main.ts",
     "t": "clear && bun run src/test.ts",
     "b": "clear && tsup src/main.ts --format esm --dts && esbuild dist/main.js --bundle --minify --format=esm --platform=node --outfile=dist/main.mjs --keep-names --allow-overwrite",
     "p": "clear && npm publish --access public",
-    "i": "clear && npm info oh-my-json"
+    "f": "clear && npm info @vinoskey524/oh-my-json"
   },
   "devDependencies": {
     "@types/bun": "latest",
