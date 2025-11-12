@@ -2,6 +2,8 @@
 
 The zenith of JSON manipulation.
 
+[Official Documentation](https://package524.vercel.app)
+
 ## Table of contents
 
 - [Installation](#installation)
