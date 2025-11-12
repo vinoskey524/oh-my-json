@@ -2,7 +2,7 @@
 *
 * oh-my-json (Based on panda)
 *
-* The zenith of JSON manipulation
+* The zenith of JSON manipulation.
 *
 * @vinoskey524 • Hamet Kévin E. ODOUTAN • vinoskey524@gmail.com (Author)
 * 

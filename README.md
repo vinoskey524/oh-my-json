@@ -808,7 +808,7 @@ console.log('depth ::', depth);
 
   - `json`: The JSON object.
 
-It return a positive number, or `-1` if something goes wrong.
+It returns a positive number, or `-1` if something goes wrong.
 
 ### **iterate**
 

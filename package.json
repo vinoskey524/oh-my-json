@@ -1,16 +1,16 @@
 {
   "name": "@vinoskey524/oh-my-json",
-  "version": "1.0.3",
-  "module": "main.ts",
+  "version": "1.0.4",
   "type": "module",
   "description": "The zenith of JSON manipulation",
+  "main": "./dist/main.js",
+  "types": "./dist/main.d.ts",
   "exports": {
     "import": {
       "types": "./dist/main.d.ts",
-      "default": "./dist/main.mjs"
+      "default": "./dist/main.js"
     }
   },
-  "types": "./dist/main.d.ts",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/vinoskey524/oh-my-json.git"
@@ -19,7 +19,7 @@
   "bugs": {
     "url": "https://github.com/vinoskey524/oh-my-json/issues"
   },
-  "homepage": "https://github.com/vinoskey524/oh-my-json#readme",
+  "homepage": "https://package524.vercel.app",
   "keywords": [
     "oh-my-json",
     "json",

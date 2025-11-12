@@ -1,7 +1,7 @@
 .yarn
 node_modules
 src
-dist/main.js
+dist/main.mjs
 .DS_Store
 
 .env
