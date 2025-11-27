@@ -609,10 +609,12 @@ const resolvePathFunc = (x: { scopeId: string, path: string }): string => {
     const path = x.path;
 
     /* - */
-    if (!path.includes('...')) return path;
+    if (!path.includes('...'))
+        return path;
 
     /* - */
     const split = path.split('...');
+    const lastKey = split[1];
     let duo = [split.shift(), null];
     do {
         /* - */
@@ -622,15 +624,48 @@ const resolvePathFunc = (x: { scopeId: string, path: string }): string => {
         const p0 = duo[0] + '.';
         const p1 = '.' + duo[1];
         const tab = Object.keys(jsonData);
-        const filter = tab.filter((e) =>
+        let filter = tab.filter((e) =>
             e.includes(p0) && e.indexOf(p0) === 0 &&
             e.includes(p1) && e.indexOf(p1) > (p0.length - 1)
         );
+        let flen = filter.length;
 
         /* If no path found */
-        const flen = filter.length;
         if (flen === 0)
             throw new Error(`Impossible to resolve path "${path}"`);
+
+        /* 
+        * If more than one path found, 
+        * then check if the pandata is a JSON object 
+        * and try to correct the filter's result and length.
+        */
+        const ltab: boolean[] = [];
+        const lpaf: JSON_STRING_TYPE = {};
+        if (flen > 1) {
+            /* Process each path */
+            for (let i = 0; i < flen; i++) {
+                const pf = filter[i];
+                const tb = pf.split(lastKey);
+
+                /* Check if the last/target key appears once, in the middle of the full path */
+                const inMiddle = tb.length === 2 && tab[1].length > 0;
+                ltab.push(inMiddle ? true : false);
+
+                /* Save the path before the target key */
+                lpaf[tb[0]] = tb[0];
+            }
+
+            /* Update result and length if all paths result in the same JSON object */
+            const appearsOnceInMiddle = !ltab.includes(false);
+            const samePrefixPath = Object.keys(lpaf).length === 1;
+            const allPathsResultInTheSameJSONObject = appearsOnceInMiddle && samePrefixPath;
+            if (allPathsResultInTheSameJSONObject) {
+                const fpath = filter[0];
+                const idx = fpath.indexOf(lastKey);
+                filter = [fpath.slice(0, idx) + lastKey];
+                flen = filter.length;
+            }
+        }
 
         /* If more than one path found */
         if (flen > 1) {
@@ -651,11 +686,13 @@ const resolvePathFunc = (x: { scopeId: string, path: string }): string => {
                 for (let i = 0; i < flen; i++) {
                     const paf = filter[i];
                     const pos = paf.indexOf(mkey);
+
                     /* Set index the first time */
                     if (idx === -1) {
                         idx = pos;
                         continue;
                     }
+
                     /* - */
                     if (pos !== idx) {
                         many = true;
@@ -682,7 +719,12 @@ const resolvePathFunc = (x: { scopeId: string, path: string }): string => {
             duo[0] = arr.join('.');
         }
         /* If only one path found */
-        else duo[0] = filter[0];
+        else {
+            const fpath = filter[0];
+            const idx = fpath.indexOf(lastKey);
+            const str = fpath.slice(0, idx) + lastKey;
+            duo[0] = str;
+        }
 
     } while (split.length !== 0);
 

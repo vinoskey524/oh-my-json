@@ -1,6 +1,6 @@
 {
   "name": "@vinoskey524/oh-my-json",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "type": "module",
   "description": "The zenith of JSON manipulation",
   "main": "./dist/main.js",
