@@ -20,21 +20,21 @@ type OH_MY_JSON_TYPE = {
     * @param json JSON object.
     * @param path The path to a key or array's index.
     */
-    get: (json: JSON_DEFAULT_TYPE, path: GET_ARG_PATH_TYPE) => any,
+    get: (json: JSON_DEFAULT_TYPE, path: GET_ARG_PATH_TYPE, deps?: string[]) => any,
 
     /** 
     * Update data
     * @param json JSON object.
     * @param updates JSON object containing the new values.
     */
-    update: (json: JSON_DEFAULT_TYPE, updates: JSON_DEFAULT_TYPE) => JSON_DEFAULT_TYPE | undefined,
+    update: (json: JSON_DEFAULT_TYPE, updates: JSON_DEFAULT_TYPE, deps?: string[]) => JSON_DEFAULT_TYPE | undefined,
 
     /** 
     * Delete data
     * @param json JSON object.
     * @param path The path to a key or array's index.
     */
-    delete: (json: JSON_DEFAULT_TYPE, path: DELETE_ARG_PATH_TYPE) => JSON_DEFAULT_TYPE | undefined,
+    delete: (json: JSON_DEFAULT_TYPE, path: DELETE_ARG_PATH_TYPE, deps?: string[]) => JSON_DEFAULT_TYPE | undefined,
 
     /** 
     * Sort a JSON object
@@ -55,7 +55,7 @@ type OH_MY_JSON_TYPE = {
     * @param json JSON object.
     * @param preserve [optional] Path to maintain reference for.
     */
-    clone: (json: JSON_DEFAULT_TYPE, preserve?: string | string[]) => JSON_DEFAULT_TYPE | undefined,
+    clone: (json: JSON_DEFAULT_TYPE, preserve?: string | string[], deps?: string[]) => JSON_DEFAULT_TYPE | undefined,
 
     /** 
     * Decompose a JSON object
@@ -114,7 +114,7 @@ type OH_MY_JSON_TYPE = {
     * @param json JSON object.
     * @param path [optional] The path to the key.
     */
-    exists: (json: JSON_DEFAULT_TYPE, path: string | string[] | JSON_STRING_TYPE) => EXISTS_RETURN_TYPE,
+    exists: (json: JSON_DEFAULT_TYPE, path: string | string[] | JSON_STRING_TYPE, deps?: string[]) => EXISTS_RETURN_TYPE,
 
     /** 
     * Get the depth of a JSON object
@@ -461,16 +461,26 @@ const structuredCloneFunc = (json: JSON_DEFAULT_TYPE): JSON_DEFAULT_TYPE | undef
 };
 
 /** Clone JSON */
-const cloneJSONFunc = (json: JSON_DEFAULT_TYPE, preserve?: string | string[]): JSON_DEFAULT_TYPE => {
+const cloneJSONFunc = (json: JSON_DEFAULT_TYPE, preserve?: string | string[], deps?: string[]): JSON_DEFAULT_TYPE => {
+    const ddeps = deps || [];
+
     /* TLV */
     const a = topLevelJsonFunc({ data: json });
     if (!a.ok)
         throw new Error(a.log);
-    const tlv = a.data;
+    const tdata = a.data;
+
+    /* Interpolation */
+    let newObj = tdata;
+    if (ddeps.length > 0)
+        newObj = interpolateFunc({ json: tdata, deps: ddeps });
 
     /* - */
     const scopeId = generateIdFunc();
-    scopeDATA.current[scopeId] = { id: scopeId, data: tlv };
+    scopeDATA.current[scopeId] = {
+        id: scopeId,
+        data: newObj
+    };
 
     /* - */
     if (preserve) {
@@ -480,14 +490,14 @@ const cloneJSONFunc = (json: JSON_DEFAULT_TYPE, preserve?: string | string[]): J
             const xtract = extractDataFunc({ json, path });
 
             const obj = JSON.parse(`{"${path}": null}`);
-            Object.assign(tlv, obj);
+            Object.assign(newObj, obj);
 
-            tlv[path] = xtract;
+            newObj[path] = xtract;
         }
     }
 
     /* Build */
-    const b = reverseTopLevelJsonFunc({ data: tlv });
+    const b = reverseTopLevelJsonFunc({ data: newObj });
     if (!b.ok)
         throw new Error(b.log);
     const build = b.data;
@@ -875,6 +885,44 @@ const interpolateFunc = (x: { json: JSON_DEFAULT_TYPE, deps: string[] }) => {
     return newObj;
 };
 
+/** Interpolate string */
+const interpolateStringFunc = (x: { path: any, deps: string[] }): any => {
+    const path = x.path;
+    const deps = x.deps;
+    let res: any = null;
+
+    /* - */
+    const type = getRealTypeFunc(path).type;
+    switch (type) {
+        case 'string': {
+            const obj: any = {};
+            obj[path] = '';
+            const inter = interpolateFunc({ json: obj, deps });
+            res = Object.keys(inter)[0];
+        } break;
+
+        case 'array': {
+            const tab: any[] = path;
+            let arr: any[] = [];
+            for (let i = 0; i < tab.length; i++) {
+                const cpath = tab[i];
+                const obj: any = {};
+                obj[cpath] = '';
+                const inter = interpolateFunc({ json: obj, deps });
+                arr.push(Object.keys(inter)[0]);
+            }
+            res = arr;
+        } break;
+
+        default: {
+            res = path;
+        };
+    };
+
+    /* - */
+    return res;
+};
+
 /** Get path level */
 const getPathLevelFunc = (x: { path: string }): number => {
     const path = x.path;
@@ -1175,13 +1223,14 @@ const reverseTopLevelJsonFunc = (x: { data: JSON_DEFAULT_TYPE }): FUNCTION_DEFAU
 */
 
 /** Get */
-const getFunc = (x: { json: JSON_DEFAULT_TYPE, path: GET_ARG_PATH_TYPE }): any => {
+const getFunc = (x: { json: JSON_DEFAULT_TYPE, path: GET_ARG_PATH_TYPE, deps?: string[] }): any => {
     const res: FUNCTION_DEFAULT_RETURN_TYPE = { ok: true, log: '', data: undefined };
     const scopeId = generateIdFunc();
     try {
         /* - */
         const jsonData = x.json;
-        const path = x.path;
+        let path = x.path;
+        const deps = x.deps || [];
 
         /* - */
         if (isEmptyFunc({ json: jsonData }))
@@ -1191,11 +1240,19 @@ const getFunc = (x: { json: JSON_DEFAULT_TYPE, path: GET_ARG_PATH_TYPE }): any =
         const tlv = topLevelJsonFunc({ data: jsonData });
         if (!tlv.ok)
             throw new Error(tlv.log);
+        const tdata = tlv.data;
+
+        /* Interpolation */
+        let newObj = tlv.data;
+        if (deps.length > 0) {
+            newObj = interpolateFunc({ json: tdata, deps });
+            path = interpolateStringFunc({ path, deps });
+        }
 
         /* - */
         scopeDATA.current[scopeId] = {
             id: scopeId,
-            data: tlv.data
+            data: newObj
         };
 
         /* - */
@@ -1269,11 +1326,12 @@ const getFunc = (x: { json: JSON_DEFAULT_TYPE, path: GET_ARG_PATH_TYPE }): any =
 };
 
 /** Update */
-const updateFunc = (x: { json: JSON_DEFAULT_TYPE, updates: JSON_DEFAULT_TYPE }): JSON_DEFAULT_TYPE | undefined => {
+const updateFunc = (x: { json: JSON_DEFAULT_TYPE, updates: JSON_DEFAULT_TYPE, deps?: string[] }): JSON_DEFAULT_TYPE | undefined => {
     const scopeId = generateIdFunc();
     try {
         const jsonData = x.json;
-        const updates = x.updates;
+        let updates = x.updates;
+        const deps = x.deps || [];
 
         /* - */
         if (isEmptyFunc({ json: jsonData })) return {};
@@ -1283,10 +1341,20 @@ const updateFunc = (x: { json: JSON_DEFAULT_TYPE, updates: JSON_DEFAULT_TYPE }):
         const tlv = topLevelJsonFunc({ data: jsonData });
         if (!tlv.ok)
             throw new Error(tlv.log);
-        const data: JSON_DEFAULT_TYPE = tlv.data;
+        const tdata = tlv.data;
+
+        /* Interpolation */
+        let newObj = tlv.data;
+        if (deps.length > 0) {
+            newObj = interpolateFunc({ json: tdata, deps });
+            updates = interpolateFunc({ json: updates, deps });
+        }
 
         /* - */
-        scopeDATA.current[scopeId] = { id: scopeId, data };
+        scopeDATA.current[scopeId] = {
+            id: scopeId,
+            data: newObj
+        };
 
         /* Resolve paths */
         const newUpdates: JSON_DEFAULT_TYPE = {};
@@ -1316,8 +1384,8 @@ const updateFunc = (x: { json: JSON_DEFAULT_TYPE, updates: JSON_DEFAULT_TYPE }):
         }
 
         /* Build */
-        const newObj = Object.assign(data, newUpdates);
-        const build = reverseTopLevelJsonFunc({ data: newObj });
+        const updatedObj = Object.assign(newObj, newUpdates);
+        const build = reverseTopLevelJsonFunc({ data: updatedObj });
         if (!build.ok)
             throw new Error(build.log);
 
@@ -1331,11 +1399,12 @@ const updateFunc = (x: { json: JSON_DEFAULT_TYPE, updates: JSON_DEFAULT_TYPE }):
 };
 
 /** Delete */
-const deleteFunc = (x: { json: JSON_DEFAULT_TYPE, path: DELETE_ARG_PATH_TYPE }): JSON_DEFAULT_TYPE | undefined => {
+const deleteFunc = (x: { json: JSON_DEFAULT_TYPE, path: DELETE_ARG_PATH_TYPE, deps?: string[] }): JSON_DEFAULT_TYPE | undefined => {
     const scopeId = generateIdFunc();
     try {
         const jsonData = x.json;
         const path = Array.isArray(x.path) ? x.path : [x.path];
+        const deps = x.deps || [];
 
         /* - */
         if (isEmptyFunc({ json: jsonData }))
@@ -1345,13 +1414,21 @@ const deleteFunc = (x: { json: JSON_DEFAULT_TYPE, path: DELETE_ARG_PATH_TYPE }):
         const tlv = topLevelJsonFunc({ data: jsonData });
         if (!tlv.ok)
             throw new Error(tlv.log);
-        const data = tlv.data;
+        const tdata = tlv.data;
+
+        /* Interpolation */
+        let newObj = tlv.data;
+        if (deps.length > 0)
+            newObj = interpolateFunc({ json: tdata, deps });
 
         /* - */
-        scopeDATA.current[scopeId] = { id: scopeId, data };
+        scopeDATA.current[scopeId] = {
+            id: scopeId,
+            data: newObj
+        };
 
         /* Delete each path */
-        const keys = Object.keys(data);
+        const keys = Object.keys(newObj);
         for (let i = 0; i < path.length; i++) {
             let currentPath = path[i];
             currentPath = resolvePathFunc({ scopeId, path: currentPath });
@@ -1362,7 +1439,7 @@ const deleteFunc = (x: { json: JSON_DEFAULT_TYPE, path: DELETE_ARG_PATH_TYPE }):
                 continue;
             for (let m = 0; m < filter.length; m++) {
                 const path = filter[m];
-                delete data[path];
+                delete newObj[path];
             }
         }
 
@@ -1370,7 +1447,7 @@ const deleteFunc = (x: { json: JSON_DEFAULT_TYPE, path: DELETE_ARG_PATH_TYPE }):
         delete scopeDATA.current[scopeId];
 
         /* Build */
-        const build = reverseTopLevelJsonFunc({ data });
+        const build = reverseTopLevelJsonFunc({ data: newObj });
         if (!build.ok)
             throw new Error(build.log);
 
@@ -1435,12 +1512,12 @@ const mergeFunc = (x: { array: JSON_DEFAULT_TYPE[], deps?: string[] }): JSON_DEF
             const tlv = topLevelJsonFunc({ data: current });
             if (!tlv.ok)
                 throw new Error(tlv.log);
-            const data = tlv.data;
+            const tdata = tlv.data;
 
             /* Interpolation */
-            let newObj = data;
+            let newObj = tdata;
             if (deps.length > 0)
-                newObj = interpolateFunc({ json: data, deps });
+                newObj = interpolateFunc({ json: tdata, deps });
 
             /* - */
             Object.assign(collector, newObj);
@@ -1469,10 +1546,11 @@ const mergeFunc = (x: { array: JSON_DEFAULT_TYPE[], deps?: string[] }): JSON_DEF
 };
 
 /** Clone */
-const cloneFunc = (x: { json: JSON_DEFAULT_TYPE, preserve?: string | string[] }): JSON_DEFAULT_TYPE | undefined => {
+const cloneFunc = (x: { json: JSON_DEFAULT_TYPE, preserve?: string | string[], deps?: string[] }): JSON_DEFAULT_TYPE | undefined => {
     try {
         const jsonData = x.json;
         const preserve = x.preserve;
+        const deps = x.deps || [];
         let res = {};
 
         /* - */
@@ -1481,7 +1559,7 @@ const cloneFunc = (x: { json: JSON_DEFAULT_TYPE, preserve?: string | string[] })
 
         /* - */
         if (preserve)
-            res = cloneJSONFunc(jsonData, preserve);
+            res = cloneJSONFunc(jsonData, preserve, deps);
         else {
             /* Try "structuredClone" */
             const sclone = structuredCloneFunc(jsonData);
@@ -1836,9 +1914,11 @@ const parseFunc = (x: { text: string }): JSON_DEFAULT_TYPE | undefined => {
 const isEmptyFunc = (x: { json: JSON_DEFAULT_TYPE }): boolean => Object.keys(x.json).length === 0;
 
 /** Exists */
-const existsFunc = (x: { json: JSON_DEFAULT_TYPE, path: string | string[] | JSON_STRING_TYPE }): EXISTS_RETURN_TYPE => {
+const existsFunc = (x: { json: JSON_DEFAULT_TYPE, path: string | string[] | JSON_STRING_TYPE, deps?: string[] }): EXISTS_RETURN_TYPE => {
     const jsonData = x.json;
     const path = x.path;
+    const deps = x.deps || [];
+
     let res: any = false;
     const typ = getRealTypeFunc(path).type;
 
@@ -1875,11 +1955,19 @@ const existsFunc = (x: { json: JSON_DEFAULT_TYPE, path: string | string[] | JSON
         plogFunc('⛔️ Err [oh-my-json] :: existsFunc() =>', tlv.log);
         throw new Error(tlv.log);
     }
-    const data = tlv.data;
+    const tdata = tlv.data;
+
+    /* Interpolation */
+    let newObj = tlv.data;
+    if (deps.length > 0)
+        newObj = interpolateFunc({ json: tdata, deps });
 
     /* - */
     const scopeId = generateIdFunc();
-    scopeDATA.current[scopeId] = { id: scopeId, data };
+    scopeDATA.current[scopeId] = {
+        id: scopeId,
+        data: newObj
+    };
 
     /* - */
     switch (typ) {
@@ -2091,20 +2179,20 @@ const jzon: MAIN_TYPE = {
     init(): OH_MY_JSON_TYPE {
         const next = {
             /* get */
-            get(json: JSON_DEFAULT_TYPE, path: GET_ARG_PATH_TYPE): any {
-                const data = getFunc({ json, path });
+            get(json: JSON_DEFAULT_TYPE, path: GET_ARG_PATH_TYPE, deps?: string[]): any {
+                const data = getFunc({ json, path, deps });
                 return data;
             },
 
             /* update */
-            update(json: JSON_DEFAULT_TYPE, updates: JSON_DEFAULT_TYPE): JSON_DEFAULT_TYPE | undefined {
-                const data = updateFunc({ json, updates });
+            update(json: JSON_DEFAULT_TYPE, updates: JSON_DEFAULT_TYPE, deps?: string[]): JSON_DEFAULT_TYPE | undefined {
+                const data = updateFunc({ json, updates, deps });
                 return data;
             },
 
             /* delete */
-            delete(json: JSON_DEFAULT_TYPE, path: DELETE_ARG_PATH_TYPE): JSON_DEFAULT_TYPE | undefined {
-                const data = deleteFunc({ json, path });
+            delete(json: JSON_DEFAULT_TYPE, path: DELETE_ARG_PATH_TYPE, deps?: string[]): JSON_DEFAULT_TYPE | undefined {
+                const data = deleteFunc({ json, path, deps });
                 return data;
             },
 
@@ -2121,8 +2209,8 @@ const jzon: MAIN_TYPE = {
             },
 
             /* clone */
-            clone(json: JSON_DEFAULT_TYPE, preserve?: string | string[]): JSON_DEFAULT_TYPE | undefined {
-                const data = cloneFunc({ json, preserve });
+            clone(json: JSON_DEFAULT_TYPE, preserve?: string | string[], deps?: string[]): JSON_DEFAULT_TYPE | undefined {
+                const data = cloneFunc({ json, preserve, deps });
                 return data;
             },
 
@@ -2175,8 +2263,8 @@ const jzon: MAIN_TYPE = {
             },
 
             /* Exists */
-            exists(json: JSON_DEFAULT_TYPE, path: string | string[] | JSON_STRING_TYPE): EXISTS_RETURN_TYPE {
-                const data = existsFunc({ json, path });
+            exists(json: JSON_DEFAULT_TYPE, path: string | string[] | JSON_STRING_TYPE, deps?: string[]): EXISTS_RETURN_TYPE {
+                const data = existsFunc({ json, path, deps });
                 return data;
             },
 
